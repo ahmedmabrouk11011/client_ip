@@ -1,7 +1,5 @@
 # Client IP Task Demo
 
-This is a demo task for PawaPay. 
-
 The task scope is to create a simple web application that has two publicly available endpoints:
 
 - `/client-ip`: This endpoint will get the client IP address and store it in a PostgreSQL database.
