@@ -1,0 +1,6 @@
+dependencies:
+- name: application-helm
+  repository: https://pawapay.github.io/application-helm/
+  version: 0.0.11
+digest: sha256:02d4b118983439f13857b5abe085581b62ddf5eef8f29becfc9d13368b2a1f40
+generated: "2024-03-18T16:41:31.4097667+02:00"

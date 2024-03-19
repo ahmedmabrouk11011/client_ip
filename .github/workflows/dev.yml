@@ -1,0 +1,65 @@
+name: Dev - Build, Push, and Deploy with Secrets
+
+on:
+  push:
+    branches:
+      - dev*
+    paths-ignore:
+      - "README.md"
+
+permissions:
+  id-token: write # Required to get the ID Token that will be used for OIDC
+  contents: read # This is required for actions/checkout@v2
+
+jobs:
+  build-push-deploy:
+    environment: dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION}}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }} 
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      
+      - name: Update Helm dependencies
+        run: helm dependency update ./chart
+
+      - name: Deploy Helm Chart To Amazon EKS Cluster
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+          KUBECONFIG: ${{ github.workspace }}/kubeconfig
+        run: |
+          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER }} --region=${{ secrets.AWS_REGION }} --role-arn ${{ secrets.ASSUME_ROLE_ARN }} --kubeconfig $KUBECONFIG
+          helm upgrade --install --wait clientip ./chart \
+            -f ./chart/common-values.yaml \
+            -f ./chart/${{ secrets.ENVIRONMENT }}-values.yaml \
+            --set application.secret.files[0].data.DB_PASSWORD="$DB_PASSWORD" \
+            --set application.configMap.files[0].data.DB_HOST="$DB_HOST" \
+            --set application.deployment.image.repository="$ECR_REGISTRY/$ECR_REPOSITORY" \
+            --set application.deployment.image.tag="$IMAGE_TAG"
+
+      - name: Clear local Docker images
+        run: |
+          docker rmi -f $(docker images -aq)

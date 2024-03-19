@@ -116,7 +116,7 @@ app.get('/client-ip/list', (req, res) => {
 
 // Define a GET endpoint to return a welcome message
 app.get('/', (req, res) => {
-    res.send('Welcome to the Client IP Task Demo [DEV]');
+    res.send('Welcome to the Client IP Task Demo');
 });
 
 // Define a GET endpoint to delete all client IPs from the table
