@@ -1,0 +1,40 @@
+version: '3'
+services:
+  app:
+    build: .
+    ports:
+      - 3000:3000
+    depends_on:
+      - postgres
+    environment:
+      - DB_HOST=postgres
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=task_db
+      - DB_PORT=5432
+  postgres:
+    image: postgres
+    ports:
+        - 5432:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=task_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+  pgadmin:
+    container_name: pgadmin_container
+    image: dpage/pgadmin4:5.2
+    restart: always
+    environment:
+        PGADMIN_DEFAULT_EMAIL: admin@example.com
+        PGADMIN_DEFAULT_PASSWORD: postgres
+        PGADMIN_LISTEN_PORT: 5433
+        PGADMIN_CONFIG_SERVER_MODE: "False"
+        PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+        - "5433:5433"
+    depends_on:
+        - postgres
+volumes:
+  postgres-data:
